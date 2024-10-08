@@ -8,7 +8,7 @@ class Draw:
     def __init__(self):
         pyxel.init(CANVAS_SIZE, CANVAS_SIZE)
         pyxel.cls(CANVAS_COLOR)
-        numRow = CANVAS_SIZE//2*CIRCLE_RADIUS
+        numRow = CANVAS_SIZE//(2*CIRCLE_RADIUS)
         for i in range(numRow*numRow):
             Row = (i//numRow) * CIRCLE_RADIUS * 2 + CIRCLE_RADIUS
             x = (i%numRow) * CIRCLE_RADIUS * 2 + CIRCLE_RADIUS
