@@ -12,7 +12,7 @@ class Draw:
         pyxel.run(self.update, self.draw)
     def update(self):
         self.a += 1
-        if(self.a > HALF_CANVAS):
+        if self.a > HALF_CANVAS:
             self.a = 0
     def draw(self):
         pyxel.cls(CANVAS_COLOR)

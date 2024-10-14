@@ -12,7 +12,7 @@ class Draw:
         pyxel.run(self.update, self.draw)
     def update(self):
         self.a += self.way
-        if self.a > CANVAS_SIZE or self.a < 0:
+        if pyxel.btnp(pyxel.KEY_SPACE):
             self.way = self.way * -1
     def draw(self):
         pyxel.cls(CANVAS_COLOR)
