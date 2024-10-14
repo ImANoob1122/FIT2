@@ -9,14 +9,14 @@ class Draw:
     def __init__(self):
         pyxel.init(CANVAS_SIZE, CANVAS_SIZE)
         pyxel.cls(CANVAS_COLOR)
-        numRow = CANVAS_SIZE//(CIRCLE_RADIUS*2)
-        for i in range(numRow*numRow):
-            Row = i//numRow
-            x = i%numRow
-            culRow = Row * CIRCLE_RADIUS * 2 + CIRCLE_RADIUS
-            culx = x * CIRCLE_RADIUS * 2 + CIRCLE_RADIUS
-            color = (x+Row)//MAGIC
-            pyxel.circ(culx, culRow, CIRCLE_RADIUS, CIRCLE_COLOR[color])
+        row, num  = 0, 0
+        for i in range(CIRCLE_RADIUS, CANVAS_SIZE, CIRCLE_RADIUS*2):
+            for j in range(CIRCLE_RADIUS, CANVAS_SIZE, CIRCLE_RADIUS*2):
+                color = (row+num) // MAGIC
+                pyxel.circ(i, j, CIRCLE_RADIUS, CIRCLE_COLOR[color])
+                num += 1
+            num = 0
+            row += 1
         pyxel.show()
 
 
