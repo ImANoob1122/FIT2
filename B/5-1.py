@@ -3,7 +3,7 @@ CANVAS_SIZE = 200
 CANVAS_COLOR = 7
 CIRCLE_RADIUS = 10
 CIRCLE_COLOR = (2,3,6,14)
-MAGIC = 5
+MAGIC = 5 #マジックナンバー
 
 class Draw:
     def __init__(self):
