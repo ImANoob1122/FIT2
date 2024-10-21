@@ -7,12 +7,15 @@ class Draw:
     def __init__(self):
         pyxel.init(CANVAS_SIZE, CANVAS_SIZE, title="mouse line")
         pyxel.cls(CANVAS_COLOR)
+        self.now = False
         pyxel.run(self.update, self.draw)
     def update(self):
         if pyxel.btnp(pyxel.KEY_SPACE):
-            self.startX, self.startY = pyxel.mouse_x, pyxel.mouse_y
+            if not self.now:
+                self.startX, self.startY = pyxel.mouse_x, pyxel.mouse_y
+            self.now = not self.now
     def draw(self):
-        if pyxel.btn(pyxel.KEY_SPACE):
+        if self.now:
             pyxel.cls(CANVAS_COLOR)
             pyxel.line(self.startX, self.startY, pyxel.mouse_x, pyxel.mouse_y, LINE_COLOR)
 
