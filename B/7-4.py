@@ -11,10 +11,9 @@ class Draw:
         pyxel.run(self.update, self.draw)
     def update(self):
         if pyxel.btnp(pyxel.KEY_SPACE):
-            self.now = True
-            self.startX, self.startY = pyxel.mouse_x, pyxel.mouse_y
-        if pyxel.btnr(pyxel.KEY_SPACE):
-            self.now = False
+            if not self.now:
+                self.startX, self.startY = pyxel.mouse_x, pyxel.mouse_y
+            self.now = not self.now
     def draw(self):
         if self.now:
             pyxel.cls(CANVAS_COLOR)
