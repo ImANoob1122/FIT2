@@ -7,6 +7,7 @@
 
 import pyxel
 import math
+from dataclasses import dataclass
 
 CANVAS_SIZE_WIDTH = 200
 CANVAS_SIZE_HEIGHT = 280
@@ -40,6 +41,17 @@ ENEMY_HIGHT = 8
 ENEMY_SPEED = 1
 ENEMY_RADIUS = 4
 
+@dataclass
+class Power:
+    """プレイヤー・エネミーが持つ力のデータ一覧"""
+    hitpoint: int # 体力
+    base_damage: float # ベースダメージ
+    damage_ratio: float # ダメージ倍率
+    shoot_cooltime: int # 射撃のクールタイム
+    shoot_cooltime_ratio: float # 射撃のクールタイム倍率
+    bullet_num: int # 発射する弾の数
+    bullet_speed: float
+    bullet_speed_ratio: float
 
 class Background: # サンプルコードからのコピペ
     def __init__(self):
@@ -52,6 +64,7 @@ class Background: # サンプルコードからのコピペ
                     pyxel.rndf(1, 2.5),
                 )
             )
+            Power()
 
     def update(self):
         for i, (x, y, speed) in enumerate(self.stars):
@@ -72,7 +85,7 @@ class Player:
         self.y = y + (self.h // 2)
         self.is_alive = True
         self.hitpoint = 5
-        self.power = {'power': 10, 'power_ratio': 1.0, 'cooltime': FPS//3, 'cooltime_ratio': 1.0, 'bullet_num_ratio': 1, 'bullet_speed_ratio': 1.0,
+        self.power = {'cooltime': FPS//3, 'cooltime_ratio': 1.0, 'bullet_num_ratio': 1, 'bullet_speed_ratio': 1.0,
                       'base_damage': 2, 'damage_ratio': 1.0}
         self.bullets = []
         self.cooltime = 0
@@ -125,13 +138,13 @@ class Player:
         
 
 class Bullet:
-    def __init__(self, x, y, angle, power = {}, enemy = False):
+    def __init__(self, x, y, angle, power: dict, enemy = False):
         self.w = BULLET_WIDTH
         self.h = BULLET_HEIGHT
         self.x = x
         self.y = y 
         self.vx, self.vy = pyxel.cos(angle), pyxel.sin(angle)
-        self.power = power
+        self.power = power.copy()
         self.is_dead = False
         self.enemy = enemy
 
@@ -151,10 +164,11 @@ class Enemy:
         self.y = y
         self.w = ENEMY_WIDTH
         self.h = ENEMY_HIGHT
-        self.power = power
+        self.power = power.copy()
         self.time_enemystart = pyxel.frame_count
         self.bullets = []
         self.bulletangle = [90, 105, 75, 120]
+        self.is_dead = False
 
     def update(self, vx = 0, vy = 0):
         self.x += vx * ENEMY_SPEED
@@ -169,6 +183,11 @@ class Enemy:
             if bullet.is_dead:
                 self.bullets.remove[bullet]
 
+        if self.power['hitpoint'] <= 0:
+            self.is_dead = True
+
+    def damage(self, power):
+        self.power['hitpoint'] -= power['base_damage'] * power['damage_ratio']
 
     def draw(self):
         pyxel.blt(self.x - (self.w//2), self.y - (self.h//2), 0, 8, 0, self.w, self.h, 0)
@@ -178,16 +197,16 @@ class Wave:
         self.wave_count = 1
         self.wave_timelimit = FPS*60
         self.enemy_power = {'power': 1, 'cooltime': FPS//3, 'cooltime_ratio': 1.0, 'bullet_num': 1, 'bullet_speed_ratio': 1.0,
-                            'base_damage': 2, 'damage_ratio': 1.0}
+                            'base_damage': 2, 'damage_ratio': 1.0, 'hitpoint': 5}
         self.enemys = []
         self.createWave()
 
     def createWave(self):
         self.time_wavestart = pyxel.frame_count
-        level = self.wave_count % 5
+        self.level = self.wave_count % 5
         self.mode = 0
         enemy = math.floor(math.log2(self.wave_count)) + 3 #敵の数を増やしすぎない
-        match level:
+        match self.level:
             case 1:
                 self.enemy_power.update({'bullet_num': 1})
                 for _ in range(enemy):
@@ -205,27 +224,45 @@ class Wave:
                 pass
 
     def update(self):
-        match self.mode:
-            case 0:
-                for enemy in self.enemys[:]:
-                    enemy.update(vy=1)
-        pass
+        match self.level:
+            case 5:
+                pass
+            case _:
+                match self.mode:
+                    case 0:
+                        for enemy in self.enemys[:]:
+                            enemy.update(vy=1)
+        
+        for enemy in self.enemys[:]:
+            if enemy.is_dead:
+                self.enemys.remove(enemy)
 
     def draw(self):
         for enemy in self.enemys[:]:
             enemy.draw()
         pass
 
+    def give_bullets(self):
+        tama = []
+        for enemy in self.enemys[:]:
+            tama.extend(enemy.bullets)
+        return tama
+
+    def give_enemys(self):
+        return self.enemys
+
 
 class App:
     def __init__(self):
-        self.score = 0
+        global score
+        score = 0
         pyxel.init(CANVAS_SIZE_WIDTH, CANVAS_SIZE_HEIGHT, title="Pyxel STG", fps=FPS, display_scale=3)
         pyxel.load('STG.pyxres')
         self.background = Background()
         self.scene = SCENE_TITLE
         self.player_bullet = []
         self.enemy_bullet = []
+        self.enemys = []
         self.player = Player(CANVAS_SIZE_WIDTH//2, CANVAS_SIZE_HEIGHT//2)
         self.wave = Wave()
         pyxel.run(self.update, self.draw)
@@ -249,6 +286,28 @@ class App:
         self.player.update()
         self.player_bullet = self.player.give_bullet()
         self.wave.update()
+        self.enemy_bullet = self.wave.give_bullets()
+        self.enemys = self.wave.give_enemys()
+
+        for bullet in self.player_bullet[:]:
+            for enemy in self.enemys[:]:
+                if self.check_collition(bullet, enemy):
+                    enemy.damage(bullet.power)
+                    bullet.is_dead = True
+
+    def check_collition(self, bullet: Bullet, entity):
+        entity_radius = 0
+        if type(entity) == Player:
+            entity_radius = PLAYER_RADIUS
+        elif type(entity) == Enemy:
+            entity_radius = ENEMY_RADIUS
+        
+        distance = pyxel.sqrt( 
+            pow( entity.x - bullet.x, 2 ) +
+            pow( entity.y - bullet.y, 2)
+        )
+        return entity_radius + BULLET_RADIUS > distance
+        
 
     def draw(self):
         pyxel.cls(CANVAS_COLOR)
@@ -266,11 +325,7 @@ class App:
     def draw_scene_play(self):
         self.player.draw()
         self.wave.draw()
-        pyxel.text(SCORE_BORD, SCORE_BORD, "score: %d" % (self.score), SCORE_COLOR)
+        pyxel.text(SCORE_BORD, SCORE_BORD, "score: %d" % (score), SCORE_COLOR)
         pyxel.text(pyxel.width-30, SCORE_BORD, "wave: %d" % (self.wave.wave_count), SCORE_COLOR)
-
-
-    
-            
 
 App()
